@@ -3,9 +3,9 @@ from discord.ext import commands
 import os
 import asyncio
 
-# Configuration using environment variables (for Railway)
-USER_TOKEN = os.getenv('DISCORD_USER_TOKEN')  # Get token from environment variables
-AUTO_RESPONSE = os.getenv('AUTO_RESPONSE', "Hi there! 😊 I'm currently asleep, but I'll reply as soon as I wake up. Thanks for your patience!")
+# Configuration - using environment variables is safer!
+USER_TOKEN = os.getenv('DISCORD_USER_TOKEN', "your_user_token_here")
+AUTO_RESPONSE = "Hi there! 😊 I’m currently asleep, but I’ll reply as soon as I wake up. Thanks for your patience!"
 
 class SelfBot(commands.Bot):
     def __init__(self):
@@ -17,10 +17,14 @@ class SelfBot(commands.Bot):
 
     async def on_ready(self):
         print(f'Logged in as {self.user}')
-        # Set DND status with custom status
+        
+        # Set custom DND status with sleeping message
         await self.change_presence(
             status=discord.Status.dnd,
-            activity=discord.CustomActivity(name="I'm currently sleeping 💤")
+            activity=discord.CustomActivity(
+                name="I'm currently sleeping 💤",  # The 💤 adds a sleeping emoji
+                state="zzz..."  # Some clients may show this as secondary text
+            )
         )
 
     async def on_message(self, message):
@@ -37,22 +41,11 @@ class SelfBot(commands.Bot):
             except Exception as e:
                 print(f"Error replying to {message.author}: {str(e)}")
 
-def main():
-    if not USER_TOKEN:
-        print("Error: DISCORD_USER_TOKEN environment variable not set!")
-        return
+bot = SelfBot()
 
-    bot = SelfBot()
-    
-    try:
-        print("Starting bot...")
-        bot.run(USER_TOKEN)
-    except discord.LoginFailure:
-        print("Invalid token - please check your DISCORD_USER_TOKEN")
-    except Exception as e:
-        print(f"Fatal error: {str(e)}")
-    finally:
-        print("Bot has stopped")
-
-if __name__ == "__main__":
-    main()
+try:
+    bot.run(USER_TOKEN)
+except discord.LoginFailure:
+    print("Invalid token - please check your USER_TOKEN")
+except Exception as e:
+    print(f"Error: {e}")
