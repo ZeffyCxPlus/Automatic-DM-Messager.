@@ -1,13 +1,11 @@
 import discord
 from discord.ext import commands
 import os
-import logging
+import asyncio
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
-USER_TOKEN = os.getenv("DISCORD_USER_TOKEN")
-AUTO_RESPONSE = "Hi there! 😊 I’m currently asleep, but I’ll reply as soon as I wake up. Thanks for your patience!"
+# Configuration using environment variables (for Railway)
+USER_TOKEN = os.getenv('DISCORD_USER_TOKEN')  # Get token from environment variables
+AUTO_RESPONSE = os.getenv('AUTO_RESPONSE', "Hi there! 😊 I'm currently asleep, but I'll reply as soon as I wake up. Thanks for your patience!")
 
 class SelfBot(commands.Bot):
     def __init__(self):
@@ -18,36 +16,43 @@ class SelfBot(commands.Bot):
         )
 
     async def on_ready(self):
-        logger.info(f'Logged in as {self.user} (ID: {self.user.id})')
-        logger.info('------')
+        print(f'Logged in as {self.user}')
+        # Set DND status with custom status
+        await self.change_presence(
+            status=discord.Status.dnd,
+            activity=discord.CustomActivity(name="I'm currently sleeping 💤")
+        )
 
     async def on_message(self, message):
         if message.author == self.user:
             return
 
         if isinstance(message.channel, discord.DMChannel):
-            logger.info(f"New DM from {message.author}: {message.content[:50]}{'...' if len(message.content) > 50 else ''}")
+            print(f"New DM from {message.author}: {message.content[:50]}...")
             try:
                 await message.reply(AUTO_RESPONSE)
-                logger.info(f"Sent auto-response to {message.author}")
-            except discord.HTTPException as e:
-                logger.error(f"Failed to send reply: {e}")
+                print(f"Successfully replied to {message.author}")
+            except discord.Forbidden:
+                print(f"Couldn't reply to {message.author} (blocked or no permissions)")
             except Exception as e:
-                logger.error(f"Unexpected error: {e}")
+                print(f"Error replying to {message.author}: {str(e)}")
 
 def main():
     if not USER_TOKEN:
-        logger.error("No Discord user token provided. Set the DISCORD_USER_TOKEN environment variable.")
+        print("Error: DISCORD_USER_TOKEN environment variable not set!")
         return
 
     bot = SelfBot()
     
     try:
+        print("Starting bot...")
         bot.run(USER_TOKEN)
     except discord.LoginFailure:
-        logger.error("Invalid token - please check your DISCORD_USER_TOKEN")
+        print("Invalid token - please check your DISCORD_USER_TOKEN")
     except Exception as e:
-        logger.error(f"Fatal error: {e}")
+        print(f"Fatal error: {str(e)}")
+    finally:
+        print("Bot has stopped")
 
 if __name__ == "__main__":
     main()
